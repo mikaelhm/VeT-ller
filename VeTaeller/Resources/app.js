@@ -26,76 +26,38 @@ var tab1 = Titanium.UI.createTab({
 var lblTimer = Titanium.UI.createLabel({
 	color:'#999',
 	text: '',
-	font:{fontSize:20,fontFamily:'Helvetica Neue'},
+	font:{fontSize:40,fontFamily:'Helvetica Neue'},
 	textAlign:'center',
+    bottom: 'auto',
 	width:'auto'
 });
 
 var btnStartStopTimer = Titanium.UI.createButton({
 	backgroundColor: '#ddd',
 	width:'auto',
-	bottom: 'auto',
-	title: 'Ny ve starter',
-	font:{fontSize:20,fontFamily:'Helvetica Neue',color:'#000'}
+	bottom: 50,
+	title: 'Start',
+	font:{fontSize:30,fontFamily:'Helvetica Neue',color:'#000'},
+   	borderWidth: 2,
+	borderRadius: 10,
+	borderColor: '#222'
 });
 
-
-
-function updateTimerLbl () {
-        now = (new Date()).getTime();
-	timer = now - TimerStarted ;
-	millisec = timer % 1000;
-	sec = ((timer - millisec) / 1000) % 60;
-	minutes = ((timer - sec - millisec) / (1000*60) ) % 60;
-	timer = String.format("%02.0f:%02.0f:%03.0f",minutes,sec,millisec)
-	lblTimer.text = timer;
-	//Titanium.API.info("StartTime: " + TimerStarted + " Now: "+ now + " Timer: " + timer );
-}
-
-function startStopTimer() {
-	if (TimerStarted==0) {
-		
-		TimerStarted = (new Date()).getTime();
-		Titanium.API.info("Start Timer: " + Timer );
-		updateTimerLbl();
-		UpdateTimer = setInterval(updateTimerLbl,30);
-
-	} else 	{
-		var now = (new Date()).getTime();
-		Timer = now - TimerStarted ;
-		TimerStarted = 0;
-		Titanium.API.info("Stop Timer" + Timer );
-		clearInterval(UpdateTimer);
-	}
-}
-
-
-
-
-
-
-
-btnStartStopTimer.addEventListener('click',function(e)
-{
-   	Titanium.API.info("You clicked the start btn");
-//	startStopTimer();
-//	clearInterval(UpdateTimer);
-	
-});
-btnStartStopTimer.addEventListener('doubletap',function(e)
-{
-   	Titanium.API.info("You doubletap the start btn");
-//	startStopTimer();
-	
-});
-btnStartStopTimer.addEventListener('singletap',function(e)
-{
-   	Titanium.API.info("You singletap the start btn");
-	startStopTimer();	
+var contractionViewData = [];
+var contractionView = Titanium.UI.createTableView({
+    data: contractionViewData,
+	top: 30,
+	left: 20,
+	right: 20,
+	height: 178,
+	borderWidth: 2,
+	borderRadius: 10,
+	borderColor: '#222'
 });
 
-win1.add(lblTimer);
+win1.add(contractionView);
 win1.add(btnStartStopTimer);
+win1.add(lblTimer);
 
 //
 // create controls tab and root window
@@ -131,3 +93,72 @@ tabGroup.addTab(tab2);
 
 // open tab group
 tabGroup.open();
+
+
+
+
+
+Ti.include('pregnancy.js');
+Ti.include('timer.js');
+
+
+var pregnancy1 = new Pregnancy();
+var timer = new Timer();
+var intervalUpdateTimer;
+
+function startStopTimer() {
+	if (timer.running == 0) {
+        timer.reset();
+   		timer.start();
+		intervalUpdateTimer = setInterval(function (){
+            lblTimer.text = timer.getDurationString();
+            },100);
+        btnStartStopTimer.title = "Stop";
+	} else {
+	    timer.stop();
+    	addNewContraction();
+        
+        btnStartStopTimer.title = "Start";
+        clearInterval(intervalUpdateTimer);
+    }
+}
+
+function addNewContraction() {
+    var contraction = new Contraction(timer.startTime,timer.endTime);
+    var length = contraction.getLengthString();
+    var distance = "";
+    var text = "";
+    var newID = pregnancy1.addContraction(contraction);
+    
+    text = "L:" + length;
+     
+    if(pregnancy1.contractions.length > 1) {
+        distance = pregnancy1.contractionDistanceString(newID-1, newID);
+        text += " D:" + distance;
+    }
+
+    var rowData = {title: text};
+    contractionView.appendRow(rowData);
+    contractionView.scrollToIndex(pregnancy1.contractions.length*2)
+
+}
+
+
+
+
+
+btnStartStopTimer.addEventListener('click',function(e)
+{
+   	Titanium.API.info("You clicked the start btn");
+	
+});
+btnStartStopTimer.addEventListener('doubletap',function(e)
+{
+   	Titanium.API.info("You doubletap the start btn");	
+});
+btnStartStopTimer.addEventListener('singletap',function(e)
+{
+   	Titanium.API.info("You singletap the start btn");
+	startStopTimer();
+    	
+});
